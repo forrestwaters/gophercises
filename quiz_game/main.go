@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 func check(e error) {
@@ -15,24 +17,29 @@ func check(e error) {
 }
 
 func getInput(question string) string {
+
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println(question)
-	var answer string
+	fmt.Println(strings.TrimSuffix(question, "\n"))
+
 	answer, err := reader.ReadString('\n')
 
 	check(err)
 
-	return answer
+	return strings.TrimSuffix(answer, "\n")
 }
 
 func main() {
 
-	content, err := os.Open("problems.csv")
+	var fn = flag.String("f", "problems.csv", "Custom filename containing problem questions.")
+	flag.Parse()
+	content, err := os.Open(*fn)
 
 	check(err)
 
 	r := csv.NewReader(bufio.NewReader(content))
+
+	var correct, totalQuestions int = 0, 0
 
 	for {
 		record, err := r.Read()
@@ -43,6 +50,14 @@ func main() {
 
 		answer := getInput(record[0])
 
-		fmt.Println(answer)
+		if answer == record[1] {
+			correct++
+		}
+
+		totalQuestions++
 	}
+
+	content.Close()
+
+	fmt.Println(fmt.Sprintf("You got %#v right out of %#v total!", correct, totalQuestions))
 }
