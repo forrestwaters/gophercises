@@ -1,63 +1,71 @@
 package main
 
 import (
-	"bufio"
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 )
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
+func exit(msg string) {
+	fmt.Printf(msg)
+	os.Exit(1)
 }
 
-func getInput(question string) string {
+type problem struct {
+	q string
+	a string
+}
 
-	reader := bufio.NewReader(os.Stdin)
+func parseLines(lines [][]string) []problem {
+	ret := make([]problem, len(lines))
 
-	fmt.Println(strings.TrimSuffix(question, "\n"))
+	for i, line := range lines {
+		ret[i] = problem{
+			q: strings.TrimSpace(line[0]),
+			a: strings.TrimSpace(line[1]),
+		}
+	}
+	return ret
+}
 
-	answer, err := reader.ReadString('\n')
-
-	check(err)
-
-	return strings.TrimSuffix(answer, "\n")
+func askUser(problems []problem) int {
+	correct := 0
+	for i, p := range problems {
+		fmt.Printf("Problem #%d: %s = \n", i+1, p.q)
+		var answer string
+		fmt.Scanf("%s\n", &answer)
+		if answer == p.a {
+			correct++
+		}
+	}
+	return correct
 }
 
 func main() {
 
-	var fn = flag.String("f", "problems.csv", "Custom filename containing problem questions.")
+	var fn = flag.String("f", "problems.csv", "Custom filename containing problem questions in the format 'question, answer'.")
 	flag.Parse()
 	content, err := os.Open(*fn)
 
-	check(err)
-
-	r := csv.NewReader(bufio.NewReader(content))
-
-	var correct, totalQuestions int = 0, 0
-
-	for {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		check(err)
-
-		answer := getInput(record[0])
-
-		if answer == record[1] {
-			correct++
-		}
-
-		totalQuestions++
+	if err != nil {
+		exit(fmt.Sprintf("Failed to open file: %s\n", *fn))
 	}
+
+	r := csv.NewReader(content)
+
+	lines, err := r.ReadAll()
+
+	if err != nil {
+		exit("Failed to parse csv file")
+	}
+
+	problems := parseLines(lines)
+
+	correct := askUser(problems)
 
 	content.Close()
 
-	fmt.Println(fmt.Sprintf("You got %#v right out of %#v total!", correct, totalQuestions))
+	fmt.Printf("You got %#v right out of %#v total!\n", correct, len(problems))
 }
